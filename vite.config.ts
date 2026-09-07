@@ -1,31 +1,10 @@
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { handleDevApiRequest } from './src/devRouter';
-
-function expressApiMiddleware(): Plugin {
-  return {
-    name: 'vercel-api-dev-middleware',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (req.url && req.url.startsWith('/api')) {
-          try {
-            await handleDevApiRequest(req, res);
-          } catch (err) {
-            console.error('Error handling API request:', err);
-            next(err);
-          }
-        } else {
-          next();
-        }
-      });
-    },
-  };
-}
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), expressApiMiddleware()],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
