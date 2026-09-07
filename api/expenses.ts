@@ -3,7 +3,19 @@ import indexHandler from './_expenses/index';
 import suggestionsHandler from './_expenses/suggestions';
 import idHandler from './_expenses/id';
 
-async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   const url = req.url || '';
   if (url.includes('suggestions')) {
     return suggestionsHandler(req, res);
@@ -19,5 +31,3 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   return indexHandler(req, res);
 }
 
-module.exports = handler;
-export default handler;

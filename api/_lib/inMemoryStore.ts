@@ -112,8 +112,9 @@ class InMemoryStore {
   init() {
     if (this.initialized) return;
 
-    const defaultPasswordHash = bcrypt.hashSync('admin123', 10);
-    const committeePasswordHash = bcrypt.hashSync('member123', 10);
+    // Pre-computed bcrypt hashes for initial credentials
+    const defaultPasswordHash = '$2a$10$TDQfxcqdbWdF4ID2hm9Me.XAYtQYSk.ZljTyAD5MwkhuvIbta27Ey';
+    const committeePasswordHash = '$2a$10$SRV7xMfJbzRVO3quv.ReCe/rM4TvZyNXkGLqlupCNKzwFkO2.Bi3O';
 
     const adminId = 'usr_admin_001';
     const memberId = 'usr_member_002';

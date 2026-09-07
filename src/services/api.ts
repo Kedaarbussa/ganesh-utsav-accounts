@@ -29,10 +29,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   });
 
   let data: any = {};
+  const responseText = await response.text().catch(() => '');
   try {
-    data = await response.json();
+    data = JSON.parse(responseText);
   } catch (e) {
-    // Non-JSON response
+    // Response was not JSON
   }
 
   if (!response.ok) {
@@ -40,8 +41,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       data?.message ||
       data?.error?.message ||
       (typeof data?.error === 'string' ? data.error : null) ||
-      response.statusText ||
-      `Request failed (${response.status})`;
+      (responseText ? (responseText.length < 300 ? responseText : responseText.slice(0, 300)) : null) ||
+      (response.statusText ? `${response.statusText} (${response.status})` : `Request failed with status ${response.status}`);
     throw new Error(errorMsg);
   }
 

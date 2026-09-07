@@ -188,33 +188,26 @@ export async function connectToDatabase() {
     return null;
   }
 
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 })
+      .then((instance) => instance)
+      .catch((err) => {
+        console.error('MongoDB Atlas Connection Error (falling back to in-memory store):', err);
+        return null as any;
+      });
+  }
+
   try {
-    const connectionPromise = (async () => {
-      if (cached.conn && mongoose.connection.readyState === 1) {
-        return cached.conn;
-      }
-      if (!cached.promise) {
-        cached.promise = mongoose.connect(MONGODB_URI, {
-          serverSelectionTimeoutMS: 3000,
-        });
-      }
-      cached.conn = await cached.promise;
-      if (cached.conn && mongoose.connection.readyState === 1) {
-        await seedDatabaseIfEmpty();
-        return cached.conn;
-      }
-      return null;
-    })();
-
-    const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => {
-        console.warn('MongoDB Atlas connection timed out. Falling back to in-memory store.');
-        resolve(null);
-      }, 3000);
-    });
-
-    const result = await Promise.race([connectionPromise, timeoutPromise]);
-    return result;
+    const conn = await cached.promise;
+    if (conn && mongoose.connection.readyState === 1) {
+      cached.conn = conn;
+      await seedDatabaseIfEmpty();
+      return cached.conn;
+    }
+    cached.promise = null;
+    cached.conn = null;
+    return null;
   } catch (e) {
     cached.promise = null;
     cached.conn = null;
