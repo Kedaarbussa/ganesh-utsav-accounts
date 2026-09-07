@@ -1,6 +1,8 @@
 import { User, Festival, Fund, Sponsorship, Expense, CommitteeMember, ActivityLog, DashboardSummary, FinalReportData } from '../types';
+import { supabase } from './supabase';
 
 const STORAGE_KEY = 'ganesh_utsav_accounts_db_v2';
+const STORE_ROW_ID = 'main_store';
 
 interface StorageSchema {
   users: User[];
@@ -212,6 +214,7 @@ function getInitialData(): StorageSchema {
 
 class ClientStorageEngine {
   private db: StorageSchema;
+  private isSyncing = false;
 
   constructor() {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -220,20 +223,67 @@ class ClientStorageEngine {
         this.db = JSON.parse(raw);
       } catch (e) {
         this.db = getInitialData();
-        this.save();
+        this.saveLocal();
       }
     } else {
       this.db = getInitialData();
-      this.save();
+      this.saveLocal();
+    }
+
+    // Try initial background pull from Supabase
+    this.pullFromCloud().catch(() => {});
+  }
+
+  private saveLocal() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
     }
   }
 
-  private save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
+  async pullFromCloud(): Promise<void> {
+    if (this.isSyncing) return;
+    this.isSyncing = true;
+    try {
+      const { data, error } = await supabase
+        .from('app_store')
+        .select('data')
+        .eq('id', STORE_ROW_ID)
+        .single();
+
+      if (data && data.data) {
+        this.db = data.data;
+        this.saveLocal();
+      } else if (error && error.code === 'PGRST116') {
+        // Row does not exist yet; initialize cloud store
+        await this.pushToCloud();
+      }
+    } catch (err) {
+      console.warn('Cloud sync pull notice:', err);
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  async pushToCloud(): Promise<void> {
+    this.saveLocal();
+    try {
+      await supabase
+        .from('app_store')
+        .upsert({
+          id: STORE_ROW_ID,
+          data: this.db,
+          updated_at: new Date().toISOString(),
+        });
+    } catch (err) {
+      console.warn('Cloud sync push notice:', err);
+    }
   }
 
   // --- AUTH ---
-  login(username: string, password: string): { token: string; user: User } {
+  async login(username: string, password: string): Promise<{ token: string; user: User }> {
+    await this.pullFromCloud();
     const u = username.toLowerCase().trim();
     const user = this.db.users.find((x) => x.username.toLowerCase() === u);
 
@@ -254,7 +304,7 @@ class ClientStorageEngine {
     }
 
     user.lastLogin = new Date().toISOString();
-    this.save();
+    await this.pushToCloud();
 
     // Create client token
     const tokenPayload = {
@@ -266,7 +316,7 @@ class ClientStorageEngine {
     };
     const token = 'client_jwt_' + btoa(encodeURIComponent(JSON.stringify(tokenPayload)));
 
-    this.addActivityLog(user.id || user._id || '', user.fullName, 'LOGIN', `User ${user.username} logged in successfully`);
+    await this.addActivityLog(user.id || user._id || '', user.fullName, 'LOGIN', `User ${user.username} logged in successfully`);
 
     return { token, user };
   }
@@ -285,11 +335,13 @@ class ClientStorageEngine {
   }
 
   // --- USERS ---
-  getUsers(): User[] {
+  async getUsers(): Promise<User[]> {
+    await this.pullFromCloud();
     return this.db.users;
   }
 
-  createUser(userData: Partial<User>): User {
+  async createUser(userData: Partial<User>): Promise<User> {
+    await this.pullFromCloud();
     const newUser: User = {
       id: 'usr_' + Date.now(),
       _id: 'usr_' + Date.now(),
@@ -300,29 +352,33 @@ class ClientStorageEngine {
       createdAt: new Date().toISOString(),
     };
     this.db.users.push(newUser);
-    this.save();
+    await this.pushToCloud();
     return newUser;
   }
 
-  updateUser(id: string, userData: Partial<User>): User {
+  async updateUser(id: string, userData: Partial<User>): Promise<User> {
+    await this.pullFromCloud();
     const u = this.db.users.find((x) => x.id === id || x._id === id);
     if (!u) throw new Error('User not found');
     Object.assign(u, userData);
-    this.save();
+    await this.pushToCloud();
     return u;
   }
 
-  deleteUser(id: string) {
+  async deleteUser(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.users = this.db.users.filter((x) => x.id !== id && x._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- FESTIVALS ---
-  getFestivals(): Festival[] {
+  async getFestivals(): Promise<Festival[]> {
+    await this.pullFromCloud();
     return this.db.festivals;
   }
 
-  createFestival(festData: Partial<Festival>): Festival {
+  async createFestival(festData: Partial<Festival>): Promise<Festival> {
+    await this.pullFromCloud();
     const newFest: Festival = {
       _id: 'fest_' + Date.now(),
       apartmentName: festData.apartmentName || 'CHANAKYA RESIDENCY',
@@ -335,33 +391,37 @@ class ClientStorageEngine {
       this.db.festivals.forEach((f) => (f.isActive = false));
     }
     this.db.festivals.push(newFest);
-    this.save();
+    await this.pushToCloud();
     return newFest;
   }
 
-  updateFestival(id: string, festData: Partial<Festival>): Festival {
+  async updateFestival(id: string, festData: Partial<Festival>): Promise<Festival> {
+    await this.pullFromCloud();
     const fest = this.db.festivals.find((x) => x._id === id);
     if (!fest) throw new Error('Festival not found');
     if (festData.isActive) {
       this.db.festivals.forEach((f) => (f.isActive = false));
     }
     Object.assign(fest, festData);
-    this.save();
+    await this.pushToCloud();
     return fest;
   }
 
-  deleteFestival(id: string) {
+  async deleteFestival(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.festivals = this.db.festivals.filter((x) => x._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- FUNDS ---
-  getFunds(festivalId?: string): Fund[] {
+  async getFunds(festivalId?: string): Promise<Fund[]> {
+    await this.pullFromCloud();
     if (!festivalId) return this.db.funds;
     return this.db.funds.filter((f) => f.festivalId === festivalId);
   }
 
-  createFund(fundData: Partial<Fund>, userId: string, userName: string): Fund {
+  async createFund(fundData: Partial<Fund>, userId: string, userName: string): Promise<Fund> {
+    await this.pullFromCloud();
     const newFund: Fund = {
       _id: 'fnd_' + Date.now(),
       festivalId: fundData.festivalId || 'fest_2026_001',
@@ -379,31 +439,35 @@ class ClientStorageEngine {
       createdAt: new Date().toISOString(),
     };
     this.db.funds.push(newFund);
-    this.addActivityLog(userId, userName, 'CREATE_FUND', `Added contribution of ₹${newFund.amount} for Flat ${newFund.flatNumber}`, newFund.festivalId);
-    this.save();
+    await this.addActivityLog(userId, userName, 'CREATE_FUND', `Added contribution of ₹${newFund.amount} for Flat ${newFund.flatNumber}`, newFund.festivalId);
+    await this.pushToCloud();
     return newFund;
   }
 
-  updateFund(id: string, fundData: Partial<Fund>): Fund {
+  async updateFund(id: string, fundData: Partial<Fund>): Promise<Fund> {
+    await this.pullFromCloud();
     const f = this.db.funds.find((x) => x._id === id);
     if (!f) throw new Error('Fund record not found');
     Object.assign(f, fundData, { updatedAt: new Date().toISOString() });
-    this.save();
+    await this.pushToCloud();
     return f;
   }
 
-  deleteFund(id: string) {
+  async deleteFund(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.funds = this.db.funds.filter((x) => x._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- SPONSORSHIPS ---
-  getSponsorships(festivalId?: string): Sponsorship[] {
+  async getSponsorships(festivalId?: string): Promise<Sponsorship[]> {
+    await this.pullFromCloud();
     if (!festivalId) return this.db.sponsorships;
     return this.db.sponsorships.filter((s) => s.festivalId === festivalId);
   }
 
-  createSponsorship(sponsorshipData: Partial<Sponsorship>, userId: string, userName: string): Sponsorship {
+  async createSponsorship(sponsorshipData: Partial<Sponsorship>, userId: string, userName: string): Promise<Sponsorship> {
+    await this.pullFromCloud();
     const newSponsorship: Sponsorship = {
       _id: 'spn_' + Date.now(),
       festivalId: sponsorshipData.festivalId || 'fest_2026_001',
@@ -422,37 +486,42 @@ class ClientStorageEngine {
       createdAt: new Date().toISOString(),
     };
     this.db.sponsorships.push(newSponsorship);
-    this.addActivityLog(userId, userName, 'CREATE_SPONSORSHIP', `Added sponsorship of ₹${newSponsorship.amount} (${newSponsorship.sponsoredItem}) by Flat ${newSponsorship.flatNumber}`, newSponsorship.festivalId);
-    this.save();
+    await this.addActivityLog(userId, userName, 'CREATE_SPONSORSHIP', `Added sponsorship of ₹${newSponsorship.amount} (${newSponsorship.sponsoredItem}) by Flat ${newSponsorship.flatNumber}`, newSponsorship.festivalId);
+    await this.pushToCloud();
     return newSponsorship;
   }
 
-  updateSponsorship(id: string, sponsorshipData: Partial<Sponsorship>): Sponsorship {
+  async updateSponsorship(id: string, sponsorshipData: Partial<Sponsorship>): Promise<Sponsorship> {
+    await this.pullFromCloud();
     const s = this.db.sponsorships.find((x) => x._id === id);
     if (!s) throw new Error('Sponsorship record not found');
     Object.assign(s, sponsorshipData, { updatedAt: new Date().toISOString() });
-    this.save();
+    await this.pushToCloud();
     return s;
   }
 
-  deleteSponsorship(id: string) {
+  async deleteSponsorship(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.sponsorships = this.db.sponsorships.filter((x) => x._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- EXPENSES ---
-  getExpenses(festivalId?: string): Expense[] {
+  async getExpenses(festivalId?: string): Promise<Expense[]> {
+    await this.pullFromCloud();
     if (!festivalId) return this.db.expenses;
     return this.db.expenses.filter((e) => e.festivalId === festivalId);
   }
 
-  getExpenseSuggestions(): string[] {
+  async getExpenseSuggestions(): Promise<string[]> {
+    await this.pullFromCloud();
     const descriptions = this.db.expenses.map((e) => e.expenseDescription);
     const defaults = ['Ganesh Idol', 'Decoration', 'Flowers & Mala', 'Water Cans', 'Sound System', 'Puja Samagri', 'Pandit Ji Dakshina', 'Prasadam Lunch', 'Immersion Procession', 'Tent & Chairs'];
     return Array.from(new Set([...defaults, ...descriptions]));
   }
 
-  createExpense(expenseData: Partial<Expense>, userId: string, userName: string): Expense {
+  async createExpense(expenseData: Partial<Expense>, userId: string, userName: string): Promise<Expense> {
+    await this.pullFromCloud();
     const newExpense: Expense = {
       _id: 'exp_' + Date.now(),
       festivalId: expenseData.festivalId || 'fest_2026_001',
@@ -468,31 +537,35 @@ class ClientStorageEngine {
       createdAt: new Date().toISOString(),
     };
     this.db.expenses.push(newExpense);
-    this.addActivityLog(userId, userName, 'CREATE_EXPENSE', `Added expense of ₹${newExpense.amount} for ${newExpense.expenseDescription}`, newExpense.festivalId);
-    this.save();
+    await this.addActivityLog(userId, userName, 'CREATE_EXPENSE', `Added expense of ₹${newExpense.amount} for ${newExpense.expenseDescription}`, newExpense.festivalId);
+    await this.pushToCloud();
     return newExpense;
   }
 
-  updateExpense(id: string, expenseData: Partial<Expense>): Expense {
+  async updateExpense(id: string, expenseData: Partial<Expense>): Promise<Expense> {
+    await this.pullFromCloud();
     const e = this.db.expenses.find((x) => x._id === id);
     if (!e) throw new Error('Expense record not found');
     Object.assign(e, expenseData, { updatedAt: new Date().toISOString() });
-    this.save();
+    await this.pushToCloud();
     return e;
   }
 
-  deleteExpense(id: string) {
+  async deleteExpense(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.expenses = this.db.expenses.filter((x) => x._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- COMMITTEE MEMBERS ---
-  getCommitteeMembers(festivalId?: string): CommitteeMember[] {
+  async getCommitteeMembers(festivalId?: string): Promise<CommitteeMember[]> {
+    await this.pullFromCloud();
     if (!festivalId) return this.db.committeeMembers;
     return this.db.committeeMembers.filter((m) => m.festivalId === festivalId);
   }
 
-  createCommitteeMember(data: Partial<CommitteeMember>): CommitteeMember {
+  async createCommitteeMember(data: Partial<CommitteeMember>): Promise<CommitteeMember> {
+    await this.pullFromCloud();
     const member: CommitteeMember = {
       _id: 'cm_' + Date.now(),
       festivalId: data.festivalId || 'fest_2026_001',
@@ -500,17 +573,19 @@ class ClientStorageEngine {
       position: data.position || '',
     };
     this.db.committeeMembers.push(member);
-    this.save();
+    await this.pushToCloud();
     return member;
   }
 
-  deleteCommitteeMember(id: string) {
+  async deleteCommitteeMember(id: string): Promise<void> {
+    await this.pullFromCloud();
     this.db.committeeMembers = this.db.committeeMembers.filter((m) => m._id !== id);
-    this.save();
+    await this.pushToCloud();
   }
 
   // --- ACTIVITY LOGS ---
-  getActivityLogs(festivalId?: string): ActivityLog[] {
+  async getActivityLogs(festivalId?: string): Promise<ActivityLog[]> {
+    await this.pullFromCloud();
     let logs = this.db.activityLogs;
     if (festivalId) {
       logs = logs.filter((l) => !l.festivalId || l.festivalId === festivalId);
@@ -518,7 +593,7 @@ class ClientStorageEngine {
     return [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  private addActivityLog(userId: string, userName: string, action: string, description: string, festivalId?: string) {
+  private async addActivityLog(userId: string, userName: string, action: string, description: string, festivalId?: string) {
     this.db.activityLogs.push({
       _id: 'act_' + Date.now(),
       festivalId,
@@ -531,10 +606,11 @@ class ClientStorageEngine {
   }
 
   // --- DASHBOARD SUMMARY ---
-  getDashboardSummary(festivalId: string): any {
-    const funds = this.getFunds(festivalId);
-    const sponsorships = this.getSponsorships(festivalId);
-    const expenses = this.getExpenses(festivalId);
+  async getDashboardSummary(festivalId: string): Promise<any> {
+    await this.pullFromCloud();
+    const funds = this.db.funds.filter((f) => !festivalId || f.festivalId === festivalId);
+    const sponsorships = this.db.sponsorships.filter((s) => !festivalId || s.festivalId === festivalId);
+    const expenses = this.db.expenses.filter((e) => !festivalId || e.festivalId === festivalId);
 
     const totalRegular = funds.reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const totalSponsorship = sponsorships.reduce((acc, curr) => acc + (curr.amount || 0), 0);
@@ -628,17 +704,18 @@ class ClientStorageEngine {
   }
 
   // --- FINAL REPORT ---
-  getFinalReport(festivalId: string): FinalReportData {
+  async getFinalReport(festivalId: string): Promise<FinalReportData> {
+    await this.pullFromCloud();
     const festival = this.db.festivals.find((f) => f._id === festivalId) || {
       apartmentName: 'CHANAKYA RESIDENCY',
       festivalName: 'GANESH UTSAV',
       year: 2026,
     };
 
-    const funds = this.getFunds(festivalId);
-    const sponsorships = this.getSponsorships(festivalId);
-    const expenses = this.getExpenses(festivalId);
-    const committeeMembers = this.getCommitteeMembers(festivalId);
+    const funds = this.db.funds.filter((f) => !festivalId || f.festivalId === festivalId);
+    const sponsorships = this.db.sponsorships.filter((s) => !festivalId || s.festivalId === festivalId);
+    const expenses = this.db.expenses.filter((e) => !festivalId || e.festivalId === festivalId);
+    const committeeMembers = this.db.committeeMembers.filter((m) => !festivalId || m.festivalId === festivalId);
 
     // Group received funds by flat
     const flatMap = new Map<string, { flatNumber: string; residentName: string; regularAmount: number; sponsorshipAmount: number; totalAmount: number }>();
