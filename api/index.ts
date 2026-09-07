@@ -24,15 +24,30 @@ import uploadHandler from './_upload/index';
 
 const app = express();
 
-// Enable CORS and body parsing
+// Enable CORS
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Safe Vercel body handling middleware (handles pre-parsed req.body from Vercel platform)
+app.use((req: any, res: any, next: any) => {
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === 'string') {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (e) {
+        // Keep as string or object
+      }
+    }
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, (err) => {
+    if (err) req.body = {};
+    next();
+  });
+});
 
 // Express wrapper adapter for Vercel handlers
 const adapt = (handler: any) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
-    // Populate query.id if route params exist
     if (req.params && req.params.id) {
       req.query = req.query || {};
       req.query.id = req.params.id;
@@ -90,4 +105,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: err?.message || 'Internal Server Error' });
 });
 
-export default app;
+// Standard Vercel Serverless Function export signature
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}
