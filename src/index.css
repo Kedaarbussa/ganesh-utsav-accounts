@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+/* Custom print formatting for Final Report A4 */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  header, sidebar, nav, button, .print\:hidden {
+    display: none !important;
+  }
+  #printable-final-report {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}
