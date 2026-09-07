@@ -38,98 +38,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const db = await connectToDatabase();
+    let db = null;
+    try {
+      db = await connectToDatabase();
+    } catch (dbErr) {
+      console.error('connectToDatabase error, falling back to store:', dbErr);
+      db = null;
+    }
+
+    const cleanUsername = String(username).toLowerCase().trim();
+    const cleanPassword = String(password);
     
     if (db) {
-      const user = await User.findOne({ username: username.toLowerCase().trim() });
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid username or password' });
+      let user = null;
+      try {
+        user = await User.findOne({ username: cleanUsername });
+      } catch (err) {
+        console.error('MongoDB User query error, falling back to store:', err);
+        user = null;
       }
 
-      if (!user.isActive) {
-        return res.status(403).json({ message: 'Account is disabled. Contact Admin.' });
-      }
+      if (user) {
+        if (!user.isActive) {
+          return res.status(403).json({ message: 'Account is disabled. Contact Admin.' });
+        }
 
-      const isMatch = await comparePassword(password, user.passwordHash);
-      if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid username or password' });
-      }
+        const isMatch = await comparePassword(cleanPassword, user.passwordHash);
+        if (!isMatch) {
+          return res.status(401).json({ message: 'Invalid username or password' });
+        }
 
-      user.lastLogin = new Date();
-      await user.save();
+        user.lastLogin = new Date();
+        await user.save().catch(() => {});
 
-      const token = signToken({
-        userId: user._id.toString(),
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-      });
-
-      await ActivityLog.create({
-        userId: user._id,
-        userName: user.fullName,
-        action: 'LOGIN',
-        description: `User ${user.username} logged in successfully`,
-      });
-
-      return res.status(200).json({
-        token,
-        user: {
-          id: user._id.toString(),
+        const token = signToken({
+          userId: user._id.toString(),
           username: user.username,
           fullName: user.fullName,
           role: user.role,
-          isActive: user.isActive,
-          lastLogin: user.lastLogin,
-        },
-      });
-    } else {
-      // In-Memory Mode
-      store.init();
-      const user = store.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid username or password' });
+        });
+
+        await ActivityLog.create({
+          userId: user._id,
+          userName: user.fullName,
+          action: 'LOGIN',
+          description: `User ${user.username} logged in successfully`,
+        }).catch(() => {});
+
+        return res.status(200).json({
+          token,
+          user: {
+            id: user._id.toString(),
+            username: user.username,
+            fullName: user.fullName,
+            role: user.role,
+            isActive: user.isActive,
+            lastLogin: user.lastLogin,
+          },
+        });
       }
-
-      if (!user.isActive) {
-        return res.status(403).json({ message: 'Account is disabled. Contact Admin.' });
-      }
-
-      const isMatch = await comparePassword(password, user.passwordHash);
-      if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid username or password' });
-      }
-
-      user.lastLogin = new Date().toISOString();
-
-      const token = signToken({
-        userId: user._id,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-      });
-
-      store.activityLogs.push({
-        _id: 'act_' + Date.now(),
-        userId: user._id,
-        userName: user.fullName,
-        action: 'LOGIN',
-        description: `User ${user.username} logged in successfully`,
-        createdAt: new Date().toISOString(),
-      });
-
-      return res.status(200).json({
-        token,
-        user: {
-          id: user._id,
-          username: user.username,
-          fullName: user.fullName,
-          role: user.role,
-          isActive: user.isActive,
-          lastLogin: user.lastLogin,
-        },
-      });
     }
+
+    // In-Memory Mode Fallback
+    store.init();
+    const user = store.users.find(u => u.username.toLowerCase() === cleanUsername);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Account is disabled. Contact Admin.' });
+    }
+
+    const isMatch = await comparePassword(cleanPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    user.lastLogin = new Date().toISOString();
+
+    const token = signToken({
+      userId: user._id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+    });
+
+    store.activityLogs.push({
+      _id: 'act_' + Date.now(),
+      userId: user._id,
+      userName: user.fullName,
+      action: 'LOGIN',
+      description: `User ${user.username} logged in successfully`,
+      createdAt: new Date().toISOString(),
+    });
+
+    return res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+      },
+    });
   } catch (error: any) {
     console.error('Login error:', error);
     return res.status(500).json({ message: error.message || 'Internal server error' });

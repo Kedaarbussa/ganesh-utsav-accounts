@@ -24,10 +24,18 @@ if (!cached) {
   cached = global.mongooseCache = { conn: null, promise: null };
 }
 
+let hasSeeded = false;
+let dbConnectionFailed = false;
+let lastFailureTime = 0;
+
 async function seedDatabaseIfEmpty() {
+  if (hasSeeded) return;
   try {
     const existingAdmin = await User.findOne({ username: 'admin' });
-    if (existingAdmin) return;
+    if (existingAdmin) {
+      hasSeeded = true;
+      return;
+    }
 
     console.log('MongoDB Atlas database empty. Auto-seeding initial credentials and festival data...');
 
@@ -170,6 +178,7 @@ async function seedDatabaseIfEmpty() {
       description: 'Initialized Ganesh Utsav 2026 accounting database',
     });
 
+    hasSeeded = true;
     console.log('MongoDB Atlas database auto-seeding completed successfully.');
   } catch (err) {
     console.error('Error auto-seeding database:', err);
@@ -184,35 +193,56 @@ export async function connectToDatabase() {
   const MONGODB_URI = process.env.MONGODB_URI;
 
   if (!MONGODB_URI) {
-    console.warn('MONGODB_URI is not defined in environment variables. Falling back to in-memory store.');
+    return null;
+  }
+
+  if (dbConnectionFailed && Date.now() - lastFailureTime < 60000) {
     return null;
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose
-      .connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 })
-      .then((instance) => instance)
-      .catch((err) => {
-        console.error('MongoDB Atlas Connection Error (falling back to in-memory store):', err);
-        return null as any;
-      });
+    try {
+      cached.promise = mongoose
+        .connect(MONGODB_URI, {
+          serverSelectionTimeoutMS: 2000,
+          connectTimeoutMS: 2000,
+        })
+        .then((instance) => instance)
+        .catch((err) => {
+          console.error('MongoDB Atlas Connection Error (falling back to in-memory store):', err?.message || err);
+          dbConnectionFailed = true;
+          lastFailureTime = Date.now();
+          return null as any;
+        });
+    } catch (err: any) {
+      console.error('Synchronous Mongoose connection error (falling back to in-memory store):', err?.message || err);
+      dbConnectionFailed = true;
+      lastFailureTime = Date.now();
+      cached.promise = Promise.resolve(null as any);
+    }
   }
 
   try {
     const conn = await cached.promise;
     if (conn && mongoose.connection.readyState === 1) {
       cached.conn = conn;
+      dbConnectionFailed = false;
       await seedDatabaseIfEmpty();
       return cached.conn;
     }
     cached.promise = null;
     cached.conn = null;
+    dbConnectionFailed = true;
+    lastFailureTime = Date.now();
     return null;
-  } catch (e) {
+  } catch (e: any) {
     cached.promise = null;
     cached.conn = null;
-    console.error('Failed to connect to MongoDB Atlas (falling back to in-memory store):', e);
+    dbConnectionFailed = true;
+    lastFailureTime = Date.now();
+    console.error('Failed to connect to MongoDB Atlas (falling back to in-memory store):', e?.message || e);
     return null;
   }
 }
+
 
