@@ -177,12 +177,8 @@ async function seedDatabaseIfEmpty() {
 }
 
 export async function connectToDatabase() {
-  if (mongoose.connection.readyState >= 1) {
+  if (mongoose.connection.readyState === 1) {
     return mongoose;
-  }
-
-  if (cached.conn) {
-    return cached.conn;
   }
 
   const MONGODB_URI = process.env.MONGODB_URI;
@@ -192,36 +188,38 @@ export async function connectToDatabase() {
     return null;
   }
 
-  if (!cached.promise) {
-    const opts = {
-      serverSelectionTimeoutMS: 5000,
-    };
-
-    cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
-      .then((mongooseInstance) => {
-        console.log('Successfully connected to MongoDB Atlas.');
-        return mongooseInstance;
-      })
-      .catch((err) => {
-        console.error('MongoDB Atlas Connection Error (falling back to in-memory store):', err);
-        cached.promise = null;
-        return null as any;
-      });
-  }
-
   try {
-    cached.conn = await cached.promise;
-    if (cached.conn) {
-      await seedDatabaseIfEmpty();
-    }
+    const connectionPromise = (async () => {
+      if (cached.conn && mongoose.connection.readyState === 1) {
+        return cached.conn;
+      }
+      if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGODB_URI, {
+          serverSelectionTimeoutMS: 3000,
+        });
+      }
+      cached.conn = await cached.promise;
+      if (cached.conn && mongoose.connection.readyState === 1) {
+        await seedDatabaseIfEmpty();
+        return cached.conn;
+      }
+      return null;
+    })();
+
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.warn('MongoDB Atlas connection timed out. Falling back to in-memory store.');
+        resolve(null);
+      }, 3000);
+    });
+
+    const result = await Promise.race([connectionPromise, timeoutPromise]);
+    return result;
   } catch (e) {
     cached.promise = null;
     cached.conn = null;
     console.error('Failed to connect to MongoDB Atlas (falling back to in-memory store):', e);
     return null;
   }
-
-  return cached.conn;
 }
 
