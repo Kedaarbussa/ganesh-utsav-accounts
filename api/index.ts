@@ -27,19 +27,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware to restore original request URL if rewritten by Vercel
-app.use((req: any, res: any, next: any) => {
-  const forwardedUri = req.headers['x-forwarded-uri'] as string;
-  const pathQuery = req.query?.path as string;
-
-  if (forwardedUri && forwardedUri.startsWith('/api')) {
-    req.url = forwardedUri;
-  } else if (pathQuery) {
-    req.url = '/api/' + pathQuery.replace(/^\/+/, '');
-  }
-  next();
-});
-
 const wrap = (fn: any) => async (req: any, res: any, next: any) => {
   try {
     if (req.params && req.params.id) {
@@ -52,74 +39,69 @@ const wrap = (fn: any) => async (req: any, res: any, next: any) => {
   }
 };
 
-const router = express.Router();
-
 // Auth
-router.post('/auth/login', wrap(authLogin));
-router.post('/auth/logout', wrap(authLogout));
-router.get('/auth/me', wrap(authMe));
+app.post(['/api/auth/login', '/auth/login'], wrap(authLogin));
+app.post(['/api/auth/logout', '/auth/logout'], wrap(authLogout));
+app.get(['/api/auth/me', '/auth/me'], wrap(authMe));
 
 // Users
-router.get('/users', wrap(usersIndex));
-router.post('/users', wrap(usersIndex));
-router.get('/users/:id', wrap(usersId));
-router.put('/users/:id', wrap(usersId));
-router.delete('/users/:id', wrap(usersId));
+app.get(['/api/users', '/users'], wrap(usersIndex));
+app.post(['/api/users', '/users'], wrap(usersIndex));
+app.get(['/api/users/:id', '/users/:id'], wrap(usersId));
+app.put(['/api/users/:id', '/users/:id'], wrap(usersId));
+app.delete(['/api/users/:id', '/users/:id'], wrap(usersId));
 
 // Festivals
-router.get('/festivals', wrap(festivalsIndex));
-router.post('/festivals', wrap(festivalsIndex));
-router.get('/festivals/:id', wrap(festivalsId));
-router.put('/festivals/:id', wrap(festivalsId));
-router.delete('/festivals/:id', wrap(festivalsId));
+app.get(['/api/festivals', '/festivals'], wrap(festivalsIndex));
+app.post(['/api/festivals', '/festivals'], wrap(festivalsIndex));
+app.get(['/api/festivals/:id', '/festivals/:id'], wrap(festivalsId));
+app.put(['/api/festivals/:id', '/festivals/:id'], wrap(festivalsId));
+app.delete(['/api/festivals/:id', '/festivals/:id'], wrap(festivalsId));
 
 // Funds
-router.get('/funds', wrap(fundsIndex));
-router.post('/funds', wrap(fundsIndex));
-router.get('/funds/:id', wrap(fundsId));
-router.put('/funds/:id', wrap(fundsId));
-router.delete('/funds/:id', wrap(fundsId));
+app.get(['/api/funds', '/funds'], wrap(fundsIndex));
+app.post(['/api/funds', '/funds'], wrap(fundsIndex));
+app.get(['/api/funds/:id', '/funds/:id'], wrap(fundsId));
+app.put(['/api/funds/:id', '/funds/:id'], wrap(fundsId));
+app.delete(['/api/funds/:id', '/funds/:id'], wrap(fundsId));
 
 // Sponsorships
-router.get('/sponsorships', wrap(sponsorshipsIndex));
-router.post('/sponsorships', wrap(sponsorshipsIndex));
-router.get('/sponsorships/:id', wrap(sponsorshipsId));
-router.put('/sponsorships/:id', wrap(sponsorshipsId));
-router.delete('/sponsorships/:id', wrap(sponsorshipsId));
+app.get(['/api/sponsorships', '/sponsorships'], wrap(sponsorshipsIndex));
+app.post(['/api/sponsorships', '/sponsorships'], wrap(sponsorshipsIndex));
+app.get(['/api/sponsorships/:id', '/sponsorships/:id'], wrap(sponsorshipsId));
+app.put(['/api/sponsorships/:id', '/sponsorships/:id'], wrap(sponsorshipsId));
+app.delete(['/api/sponsorships/:id', '/sponsorships/:id'], wrap(sponsorshipsId));
 
 // Expenses
-router.get('/expenses/suggestions', wrap(expensesSuggestions));
-router.get('/expenses', wrap(expensesIndex));
-router.post('/expenses', wrap(expensesIndex));
-router.get('/expenses/:id', wrap(expensesId));
-router.put('/expenses/:id', wrap(expensesId));
-router.delete('/expenses/:id', wrap(expensesId));
+app.get(['/api/expenses/suggestions', '/expenses/suggestions'], wrap(expensesSuggestions));
+app.get(['/api/expenses', '/expenses'], wrap(expensesIndex));
+app.post(['/api/expenses', '/expenses'], wrap(expensesIndex));
+app.get(['/api/expenses/:id', '/expenses/:id'], wrap(expensesId));
+app.put(['/api/expenses/:id', '/expenses/:id'], wrap(expensesId));
+app.delete(['/api/expenses/:id', '/expenses/:id'], wrap(expensesId));
 
 // Reports
-router.get('/reports/dashboard', wrap(reportsDashboard));
-router.get('/reports/final', wrap(reportsFinal));
+app.get(['/api/reports/dashboard', '/reports/dashboard'], wrap(reportsDashboard));
+app.get(['/api/reports/final', '/reports/final'], wrap(reportsFinal));
 
 // Committee Members
-router.get('/committee-members', wrap(committeeMembersIndex));
-router.post('/committee-members', wrap(committeeMembersIndex));
+app.get(['/api/committee-members', '/committee-members'], wrap(committeeMembersIndex));
+app.post(['/api/committee-members', '/committee-members'], wrap(committeeMembersIndex));
 
 // Activity Logs
-router.get('/activity-logs', wrap(activityLogsIndex));
+app.get(['/api/activity-logs', '/activity-logs'], wrap(activityLogsIndex));
 
 // Upload
-router.post('/upload', wrap(uploadHandler));
+app.post(['/api/upload', '/upload'], wrap(uploadHandler));
 
-app.use('/api', router);
-app.use('/', router);
-
-// 404 Handler
+// Fallback 404 Handler
 app.use((req: any, res: any) => {
-  res.status(404).json({ message: `API route ${req.method} ${req.url} not found` });
+  res.status(404).json({ message: `Route ${req.method} ${req.url} Not Found` });
 });
 
-// Error Handler
+// Global Error Handler
 app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Express API Serverless Error:', err);
+  console.error('Express API Error:', err);
   res.status(500).json({ message: err?.message || 'Internal Server Error' });
 });
 
