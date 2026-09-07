@@ -26,8 +26,8 @@ if (!cached) {
 
 async function seedDatabaseIfEmpty() {
   try {
-    const userCount = await User.countDocuments();
-    if (userCount > 0) return;
+    const existingAdmin = await User.findOne({ username: 'admin' });
+    if (existingAdmin) return;
 
     console.log('MongoDB Atlas database empty. Auto-seeding initial credentials and festival data...');
 
@@ -177,6 +177,10 @@ async function seedDatabaseIfEmpty() {
 }
 
 export async function connectToDatabase() {
+  if (mongoose.connection.readyState >= 1) {
+    return mongoose;
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -194,17 +198,18 @@ export async function connectToDatabase() {
       serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then(async (mongooseInstance) => {
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
       console.log('Successfully connected to MongoDB Atlas.');
-      await seedDatabaseIfEmpty();
       return mongooseInstance;
     });
   }
 
   try {
     cached.conn = await cached.promise;
+    await seedDatabaseIfEmpty();
   } catch (e) {
     cached.promise = null;
+    cached.conn = null;
     console.error('Failed to connect to MongoDB Atlas (falling back to in-memory store):', e);
     return null;
   }
