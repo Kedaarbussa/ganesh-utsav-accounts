@@ -28,10 +28,21 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data: any = {};
+  try {
+    data = await response.json();
+  } catch (e) {
+    // Non-JSON response
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'An error occurred during request');
+    const errorMsg =
+      data?.message ||
+      data?.error?.message ||
+      (typeof data?.error === 'string' ? data.error : null) ||
+      response.statusText ||
+      `Request failed (${response.status})`;
+    throw new Error(errorMsg);
   }
 
   return data as T;

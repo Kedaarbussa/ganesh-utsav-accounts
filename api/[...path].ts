@@ -39,9 +39,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const parsedUrl = url.parse(req.url || '', true);
   let pathname = parsedUrl.pathname || '';
 
-  // Fallback using query.path array if req.url was rewritten
+  // Fallback using query.path if req.url was rewritten
   if (req.query && Array.isArray(req.query.path)) {
     pathname = '/api/' + req.query.path.join('/');
+  } else if (req.query && typeof req.query.path === 'string') {
+    pathname = '/api/' + req.query.path;
   }
 
   try {

@@ -10,7 +10,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { username, password } = req.body || {};
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      body = {};
+    }
+  }
+
+  const { username, password } = body || {};
 
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
