@@ -264,7 +264,7 @@ class ClientStorageEngine {
       role: user.role,
       exp: Date.now() + 7 * 86400 * 1000,
     };
-    const token = 'client_jwt_' + btoa(JSON.stringify(tokenPayload));
+    const token = 'client_jwt_' + btoa(encodeURIComponent(JSON.stringify(tokenPayload)));
 
     this.addActivityLog(user.id || user._id || '', user.fullName, 'LOGIN', `User ${user.username} logged in successfully`);
 
@@ -274,7 +274,7 @@ class ClientStorageEngine {
   getMe(token: string): { user: User } {
     if (!token) throw new Error('Unauthorized');
     try {
-      const raw = atob(token.replace('client_jwt_', ''));
+      const raw = decodeURIComponent(atob(token.replace('client_jwt_', '')));
       const payload = JSON.parse(raw);
       const user = this.db.users.find((u) => u.id === payload.userId || u._id === payload.userId);
       if (!user || !user.isActive) throw new Error('User not found or account disabled');
