@@ -1,7 +1,7 @@
 import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { handleDevApiRequest } from './api/_lib/devRouter';
+import { handleDevApiRequest } from './src/devRouter';
 
 function expressApiMiddleware(): Plugin {
   return {

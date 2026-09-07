@@ -1,32 +1,31 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import url from 'url';
 
-// Import handlers
-import authLogin from '../auth/login';
-import authLogout from '../auth/logout';
-import authMe from '../auth/me';
-import usersIndex from '../users/index';
-import usersId from '../users/[id]';
-import festivalsIndex from '../festivals/index';
-import festivalsId from '../festivals/[id]';
-import fundsIndex from '../funds/index';
-import fundsId from '../funds/[id]';
-import sponsorshipsIndex from '../sponsorships/index';
-import sponsorshipsId from '../sponsorships/[id]';
-import expensesIndex from '../expenses/index';
-import expensesSuggestions from '../expenses/suggestions';
-import expensesId from '../expenses/[id]';
-import reportsDashboard from '../reports/dashboard';
-import reportsFinal from '../reports/final';
-import committeeMembersIndex from '../committee-members/index';
-import activityLogsIndex from '../activity-logs/index';
-import uploadHandler from '../upload';
+// Import serverless handlers
+import authLogin from '../api/auth/login';
+import authLogout from '../api/auth/logout';
+import authMe from '../api/auth/me';
+import usersIndex from '../api/users/index';
+import usersId from '../api/users/[id]';
+import festivalsIndex from '../api/festivals/index';
+import festivalsId from '../api/festivals/[id]';
+import fundsIndex from '../api/funds/index';
+import fundsId from '../api/funds/[id]';
+import sponsorshipsIndex from '../api/sponsorships/index';
+import sponsorshipsId from '../api/sponsorships/[id]';
+import expensesIndex from '../api/expenses/index';
+import expensesSuggestions from '../api/expenses/suggestions';
+import expensesId from '../api/expenses/[id]';
+import reportsDashboard from '../api/reports/dashboard';
+import reportsFinal from '../api/reports/final';
+import committeeMembersIndex from '../api/committee-members/index';
+import activityLogsIndex from '../api/activity-logs/index';
+import uploadHandler from '../api/upload';
 
 export async function handleDevApiRequest(req: IncomingMessage, res: ServerResponse) {
   const parsedUrl = url.parse(req.url || '', true);
   const pathname = parsedUrl.pathname || '';
 
-  // Helper to attach status and json helper to res (emulating VercelResponse)
   const vRes: any = res;
   vRes.status = (statusCode: number) => {
     res.statusCode = statusCode;
@@ -38,7 +37,6 @@ export async function handleDevApiRequest(req: IncomingMessage, res: ServerRespo
     return vRes;
   };
 
-  // Helper to parse JSON body if present
   let body: any = {};
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     const buffers: Buffer[] = [];
