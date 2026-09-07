@@ -295,8 +295,8 @@ class ClientStorageEngine {
       throw new Error('Account is disabled. Contact Admin.');
     }
 
-    // Password verification for demo accounts
-    if (u === 'admin' && password !== 'admin123') {
+    // Password verification
+    if (u === 'admin' && password !== '0904') {
       throw new Error('Invalid username or password');
     }
     if (u === 'ravinder' && password !== 'member123') {

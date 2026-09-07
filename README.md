@@ -92,7 +92,7 @@ On initial connection, the system automatically seeds default accounts:
 
 | Role | Username | Password | Access Level |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `admin123` | Complete Control (CRUD, Users, Settings) |
+| **Admin** | `admin` | `0904` | Complete Control (CRUD, Users, Settings) |
 | **Committee Member** | `ravinder` | `member123` | Data Entry & Edit Own Records |
 
 ---
