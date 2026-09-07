@@ -194,19 +194,27 @@ export async function connectToDatabase() {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
       serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      console.log('Successfully connected to MongoDB Atlas.');
-      return mongooseInstance;
-    });
+    cached.promise = mongoose
+      .connect(MONGODB_URI, opts)
+      .then((mongooseInstance) => {
+        console.log('Successfully connected to MongoDB Atlas.');
+        return mongooseInstance;
+      })
+      .catch((err) => {
+        console.error('MongoDB Atlas Connection Error (falling back to in-memory store):', err);
+        cached.promise = null;
+        return null as any;
+      });
   }
 
   try {
     cached.conn = await cached.promise;
-    await seedDatabaseIfEmpty();
+    if (cached.conn) {
+      await seedDatabaseIfEmpty();
+    }
   } catch (e) {
     cached.promise = null;
     cached.conn = null;

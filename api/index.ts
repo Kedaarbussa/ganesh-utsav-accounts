@@ -21,6 +21,37 @@ import committeeMembersIndex from './_committee-members/index';
 import activityLogsIndex from './_activity-logs/index';
 import uploadHandler from './_upload';
 
+async function parseBodyIfNeeded(req: VercelRequest) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return;
+  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) return;
+  if (typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+      return;
+    } catch (e) {}
+  }
+  return new Promise<void>((resolve) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      if (data) {
+        try {
+          req.body = JSON.parse(data);
+        } catch (e) {
+          req.body = {};
+        }
+      }
+      resolve();
+    });
+    req.on('error', () => {
+      req.body = {};
+      resolve();
+    });
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -34,6 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  await parseBodyIfNeeded(req);
 
   // Determine request pathname
   const parsedUrl = url.parse(req.url || '', true);
