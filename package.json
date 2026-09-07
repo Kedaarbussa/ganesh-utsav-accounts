@@ -12,6 +12,8 @@
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.0.1",
     "clsx": "^2.1.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
@@ -27,6 +29,8 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.24",
     "@types/papaparse": "^5.3.14",

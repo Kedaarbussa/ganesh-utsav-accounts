@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import url from 'url';
+import express from 'express';
+import cors from 'cors';
 
 import authLogin from './_auth/login';
 import authLogout from './_auth/logout';
@@ -21,145 +21,88 @@ import committeeMembersIndex from './_committee-members/index';
 import activityLogsIndex from './_activity-logs/index';
 import uploadHandler from './_upload';
 
-async function parseBodyIfNeeded(req: VercelRequest) {
-  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return;
-  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) return;
-  if (typeof req.body === 'string') {
-    try {
-      req.body = JSON.parse(req.body);
-      return;
-    } catch (e) {}
-  }
-  return new Promise<void>((resolve) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      if (data) {
-        try {
-          req.body = JSON.parse(data);
-        } catch (e) {
-          req.body = {};
-        }
-      }
-      resolve();
-    });
-    req.on('error', () => {
-      req.body = {};
-      resolve();
-    });
-  });
-}
+const app = express();
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  await parseBodyIfNeeded(req);
-
-  // Determine request pathname
-  const parsedUrl = url.parse(req.url || '', true);
-  let pathname = parsedUrl.pathname || '';
-
-  // Fallback using query.path if req.url was rewritten
-  if (req.query && typeof req.query.path === 'string') {
-    pathname = '/api/' + req.query.path;
-  } else if (req.query && Array.isArray(req.query.path)) {
-    pathname = '/api/' + req.query.path.join('/');
-  }
-
+const wrap = (fn: any) => async (req: any, res: any, next: any) => {
   try {
-    if (pathname.includes('/auth/login')) {
-      return await authLogin(req, res);
+    if (req.params && req.params.id) {
+      req.query = req.query || {};
+      req.query.id = req.params.id;
     }
-    if (pathname.includes('/auth/logout')) {
-      return await authLogout(req, res);
-    }
-    if (pathname.includes('/auth/me')) {
-      return await authMe(req, res);
-    }
-
-    if (pathname.includes('/users/') && pathname.split('/users/')[1]) {
-      const id = pathname.split('/users/')[1];
-      req.query.id = id;
-      return await usersId(req, res);
-    }
-    if (pathname.includes('/users')) {
-      return await usersIndex(req, res);
-    }
-
-    if (pathname.includes('/festivals/') && pathname.split('/festivals/')[1]) {
-      const id = pathname.split('/festivals/')[1];
-      req.query.id = id;
-      return await festivalsId(req, res);
-    }
-    if (pathname.includes('/festivals')) {
-      return await festivalsIndex(req, res);
-    }
-
-    if (pathname.includes('/funds/') && pathname.split('/funds/')[1]) {
-      const id = pathname.split('/funds/')[1];
-      req.query.id = id;
-      return await fundsId(req, res);
-    }
-    if (pathname.includes('/funds')) {
-      return await fundsIndex(req, res);
-    }
-
-    if (pathname.includes('/sponsorships/') && pathname.split('/sponsorships/')[1]) {
-      const id = pathname.split('/sponsorships/')[1];
-      req.query.id = id;
-      return await sponsorshipsId(req, res);
-    }
-    if (pathname.includes('/sponsorships')) {
-      return await sponsorshipsIndex(req, res);
-    }
-
-    if (pathname.includes('/expenses/suggestions')) {
-      return await expensesSuggestions(req, res);
-    }
-    if (pathname.includes('/expenses/') && pathname.split('/expenses/')[1]) {
-      const id = pathname.split('/expenses/')[1];
-      req.query.id = id;
-      return await expensesId(req, res);
-    }
-    if (pathname.includes('/expenses')) {
-      return await expensesIndex(req, res);
-    }
-
-    if (pathname.includes('/reports/dashboard')) {
-      return await reportsDashboard(req, res);
-    }
-    if (pathname.includes('/reports/final')) {
-      return await reportsFinal(req, res);
-    }
-
-    if (pathname.includes('/committee-members')) {
-      return await committeeMembersIndex(req, res);
-    }
-
-    if (pathname.includes('/activity-logs')) {
-      return await activityLogsIndex(req, res);
-    }
-
-    if (pathname.includes('/upload')) {
-      return await uploadHandler(req, res);
-    }
-
-    return res.status(404).json({ message: `API Endpoint ${pathname} Not Found` });
-  } catch (err: any) {
-    console.error('API Router Error:', err);
-    return res.status(500).json({ message: err.message || 'Internal Server Error' });
+    await fn(req, res);
+  } catch (err) {
+    next(err);
   }
-}
+};
+
+const router = express.Router();
+
+// Auth
+router.post('/auth/login', wrap(authLogin));
+router.post('/auth/logout', wrap(authLogout));
+router.get('/auth/me', wrap(authMe));
+
+// Users
+router.get('/users', wrap(usersIndex));
+router.post('/users', wrap(usersIndex));
+router.get('/users/:id', wrap(usersId));
+router.put('/users/:id', wrap(usersId));
+router.delete('/users/:id', wrap(usersId));
+
+// Festivals
+router.get('/festivals', wrap(festivalsIndex));
+router.post('/festivals', wrap(festivalsIndex));
+router.get('/festivals/:id', wrap(festivalsId));
+router.put('/festivals/:id', wrap(festivalsId));
+router.delete('/festivals/:id', wrap(festivalsId));
+
+// Funds
+router.get('/funds', wrap(fundsIndex));
+router.post('/funds', wrap(fundsIndex));
+router.get('/funds/:id', wrap(fundsId));
+router.put('/funds/:id', wrap(fundsId));
+router.delete('/funds/:id', wrap(fundsId));
+
+// Sponsorships
+router.get('/sponsorships', wrap(sponsorshipsIndex));
+router.post('/sponsorships', wrap(sponsorshipsIndex));
+router.get('/sponsorships/:id', wrap(sponsorshipsId));
+router.put('/sponsorships/:id', wrap(sponsorshipsId));
+router.delete('/sponsorships/:id', wrap(sponsorshipsId));
+
+// Expenses
+router.get('/expenses/suggestions', wrap(expensesSuggestions));
+router.get('/expenses', wrap(expensesIndex));
+router.post('/expenses', wrap(expensesIndex));
+router.get('/expenses/:id', wrap(expensesId));
+router.put('/expenses/:id', wrap(expensesId));
+router.delete('/expenses/:id', wrap(expensesId));
+
+// Reports
+router.get('/reports/dashboard', wrap(reportsDashboard));
+router.get('/reports/final', wrap(reportsFinal));
+
+// Committee Members
+router.get('/committee-members', wrap(committeeMembersIndex));
+router.post('/committee-members', wrap(committeeMembersIndex));
+
+// Activity Logs
+router.get('/activity-logs', wrap(activityLogsIndex));
+
+// Upload
+router.post('/upload', wrap(uploadHandler));
+
+app.use('/api', router);
+app.use('/', router);
+
+// Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Express API Serverless Error:', err);
+  res.status(500).json({ message: err?.message || 'Internal Server Error' });
+});
+
+export default app;
