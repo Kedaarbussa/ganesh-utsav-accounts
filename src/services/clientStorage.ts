@@ -531,7 +531,7 @@ class ClientStorageEngine {
   }
 
   // --- DASHBOARD SUMMARY ---
-  getDashboardSummary(festivalId: string): DashboardSummary {
+  getDashboardSummary(festivalId: string): any {
     const funds = this.getFunds(festivalId);
     const sponsorships = this.getSponsorships(festivalId);
     const expenses = this.getExpenses(festivalId);
@@ -561,7 +561,7 @@ class ClientStorageEngine {
       ...sponsorships.map((s) => s.flatNumber),
     ]);
 
-    return {
+    const summary: DashboardSummary = {
       totalRegular,
       totalSponsorship,
       totalFundsReceived,
@@ -574,6 +574,56 @@ class ClientStorageEngine {
       onlineSpent,
       onlineBalance,
       contributingFlatsCount: flatsSet.size,
+    };
+
+    const charts = {
+      fundsVsExpenses: [
+        { name: 'Funds Received', amount: totalFundsReceived },
+        { name: 'Expenses', amount: totalExpenses },
+        { name: 'Net Balance', amount: currentBalance },
+      ],
+      cashVsOnlineReceived: [
+        { name: 'Cash', value: cashReceived },
+        { name: 'Online', value: onlineReceived },
+      ],
+    };
+
+    const recentTransactions = [
+      ...funds.map((f) => ({
+        _id: f._id,
+        type: 'REGULAR_CONTRIBUTION',
+        title: `Flat ${f.flatNumber} Contribution`,
+        subtitle: f.residentName,
+        paymentMode: f.paymentMode,
+        date: f.date,
+        amount: f.amount,
+      })),
+      ...sponsorships.map((s) => ({
+        _id: s._id,
+        type: 'SPONSORSHIP',
+        title: `${s.sponsoredItem} Sponsorship`,
+        subtitle: `Flat ${s.flatNumber} - ${s.residentName}`,
+        paymentMode: s.paymentMode,
+        date: s.date,
+        amount: s.amount,
+      })),
+      ...expenses.map((e) => ({
+        _id: e._id,
+        type: 'EXPENSE',
+        title: e.expenseDescription,
+        subtitle: `Spent by ${e.spentBy}`,
+        paymentMode: e.paymentMode,
+        date: e.date,
+        amount: e.amount,
+      })),
+    ]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10);
+
+    return {
+      summary,
+      charts,
+      recentTransactions,
     };
   }
 
