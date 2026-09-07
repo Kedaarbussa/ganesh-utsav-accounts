@@ -3,7 +3,7 @@ import indexHandler from './_expenses/index';
 import suggestionsHandler from './_expenses/suggestions';
 import idHandler from './_expenses/id';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const url = req.url || '';
   if (url.includes('suggestions')) {
     return suggestionsHandler(req, res);
@@ -18,3 +18,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   return indexHandler(req, res);
 }
+
+module.exports = handler;
+export default handler;
