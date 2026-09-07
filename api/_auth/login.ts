@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     } else {
       // In-Memory Mode
-      await store.init();
+      store.init();
       const user = store.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
       if (!user) {
         return res.status(401).json({ message: 'Invalid username or password' });

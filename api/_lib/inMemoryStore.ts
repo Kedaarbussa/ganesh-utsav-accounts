@@ -109,11 +109,11 @@ class InMemoryStore {
   activityLogs: MemoryActivityLog[] = [];
   initialized = false;
 
-  async init() {
+  init() {
     if (this.initialized) return;
 
-    const defaultPasswordHash = await bcrypt.hash('admin123', 10);
-    const committeePasswordHash = await bcrypt.hash('member123', 10);
+    const defaultPasswordHash = bcrypt.hashSync('admin123', 10);
+    const committeePasswordHash = bcrypt.hashSync('member123', 10);
 
     const adminId = 'usr_admin_001';
     const memberId = 'usr_member_002';
