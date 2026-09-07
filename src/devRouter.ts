@@ -2,25 +2,25 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import url from 'url';
 
 // Import serverless handlers
-import authLogin from '../api/auth/login';
-import authLogout from '../api/auth/logout';
-import authMe from '../api/auth/me';
-import usersIndex from '../api/users/index';
-import usersId from '../api/users/[id]';
-import festivalsIndex from '../api/festivals/index';
-import festivalsId from '../api/festivals/[id]';
-import fundsIndex from '../api/funds/index';
-import fundsId from '../api/funds/[id]';
-import sponsorshipsIndex from '../api/sponsorships/index';
-import sponsorshipsId from '../api/sponsorships/[id]';
-import expensesIndex from '../api/expenses/index';
-import expensesSuggestions from '../api/expenses/suggestions';
-import expensesId from '../api/expenses/[id]';
-import reportsDashboard from '../api/reports/dashboard';
-import reportsFinal from '../api/reports/final';
-import committeeMembersIndex from '../api/committee-members/index';
-import activityLogsIndex from '../api/activity-logs/index';
-import uploadHandler from '../api/upload';
+import authLogin from '../api/_auth/login';
+import authLogout from '../api/_auth/logout';
+import authMe from '../api/_auth/me';
+import usersIndex from '../api/_users/index';
+import usersId from '../api/_users/[id]';
+import festivalsIndex from '../api/_festivals/index';
+import festivalsId from '../api/_festivals/[id]';
+import fundsIndex from '../api/_funds/index';
+import fundsId from '../api/_funds/[id]';
+import sponsorshipsIndex from '../api/_sponsorships/index';
+import sponsorshipsId from '../api/_sponsorships/[id]';
+import expensesIndex from '../api/_expenses/index';
+import expensesSuggestions from '../api/_expenses/suggestions';
+import expensesId from '../api/_expenses/[id]';
+import reportsDashboard from '../api/_reports/dashboard';
+import reportsFinal from '../api/_reports/final';
+import committeeMembersIndex from '../api/_committee-members/index';
+import activityLogsIndex from '../api/_activity-logs/index';
+import uploadHandler from '../api/_upload';
 
 export async function handleDevApiRequest(req: IncomingMessage, res: ServerResponse) {
   const parsedUrl = url.parse(req.url || '', true);

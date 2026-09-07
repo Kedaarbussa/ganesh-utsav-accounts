@@ -1,25 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import url from 'url';
 
-import authLogin from './auth/login';
-import authLogout from './auth/logout';
-import authMe from './auth/me';
-import usersIndex from './users/index';
-import usersId from './users/[id]';
-import festivalsIndex from './festivals/index';
-import festivalsId from './festivals/[id]';
-import fundsIndex from './funds/index';
-import fundsId from './funds/[id]';
-import sponsorshipsIndex from './sponsorships/index';
-import sponsorshipsId from './sponsorships/[id]';
-import expensesIndex from './expenses/index';
-import expensesSuggestions from './expenses/suggestions';
-import expensesId from './expenses/[id]';
-import reportsDashboard from './reports/dashboard';
-import reportsFinal from './reports/final';
-import committeeMembersIndex from './committee-members/index';
-import activityLogsIndex from './activity-logs/index';
-import uploadHandler from './upload';
+import authLogin from './_auth/login';
+import authLogout from './_auth/logout';
+import authMe from './_auth/me';
+import usersIndex from './_users/index';
+import usersId from './_users/[id]';
+import festivalsIndex from './_festivals/index';
+import festivalsId from './_festivals/[id]';
+import fundsIndex from './_funds/index';
+import fundsId from './_funds/[id]';
+import sponsorshipsIndex from './_sponsorships/index';
+import sponsorshipsId from './_sponsorships/[id]';
+import expensesIndex from './_expenses/index';
+import expensesSuggestions from './_expenses/suggestions';
+import expensesId from './_expenses/[id]';
+import reportsDashboard from './_reports/dashboard';
+import reportsFinal from './_reports/final';
+import committeeMembersIndex from './_committee-members/index';
+import activityLogsIndex from './_activity-logs/index';
+import uploadHandler from './_upload';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const parsedUrl = url.parse(req.url || '', true);
