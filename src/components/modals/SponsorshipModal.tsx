@@ -9,6 +9,8 @@ interface SponsorshipModalProps {
   onSuccess: () => void;
   festivalId: string;
   sponsorshipToEdit?: Sponsorship | null;
+  initialFlatNumber?: string;
+  initialResidentName?: string;
 }
 
 export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
@@ -17,6 +19,8 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
   onSuccess,
   festivalId,
   sponsorshipToEdit,
+  initialFlatNumber,
+  initialResidentName,
 }) => {
   const [flatNumber, setFlatNumber] = useState('');
   const [residentName, setResidentName] = useState('');
@@ -33,6 +37,8 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = Boolean(sponsorshipToEdit && sponsorshipToEdit._id);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,20 +69,20 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
   ];
 
   useEffect(() => {
-    if (sponsorshipToEdit) {
+    if (sponsorshipToEdit && sponsorshipToEdit._id) {
       setFlatNumber(sponsorshipToEdit.flatNumber);
       setResidentName(sponsorshipToEdit.residentName);
       setSponsoredItem(sponsorshipToEdit.sponsoredItem);
-      setAmount(sponsorshipToEdit.amount.toString());
-      setPaymentMode(sponsorshipToEdit.paymentMode);
-      setDate(new Date(sponsorshipToEdit.date).toISOString().split('T')[0]);
+      setAmount(sponsorshipToEdit.amount ? sponsorshipToEdit.amount.toString() : '');
+      setPaymentMode(sponsorshipToEdit.paymentMode || 'ONLINE');
+      setDate(sponsorshipToEdit.date ? new Date(sponsorshipToEdit.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDescription(sponsorshipToEdit.description || '');
       setNotes(sponsorshipToEdit.notes || '');
       setPaymentReference(sponsorshipToEdit.paymentReference || '');
       setProofUrl(sponsorshipToEdit.proofUrl || '');
     } else {
-      setFlatNumber('');
-      setResidentName('');
+      setFlatNumber(initialFlatNumber || '');
+      setResidentName(initialResidentName || '');
       setSponsoredItem('Lunch');
       setAmount('');
       setPaymentMode('ONLINE');
@@ -87,7 +93,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
       setProofUrl('');
     }
     setError('');
-  }, [sponsorshipToEdit, isOpen]);
+  }, [sponsorshipToEdit, initialFlatNumber, initialResidentName, isOpen]);
 
   if (!isOpen) return null;
 
@@ -144,7 +150,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
         proofUrl,
       };
 
-      if (sponsorshipToEdit) {
+      if (isEdit && sponsorshipToEdit?._id) {
         await api.put(`/sponsorships/${sponsorshipToEdit._id}`, body);
       } else {
         await api.post('/sponsorships', body);
@@ -171,10 +177,10 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
 
         <div className="mb-4 text-left">
           <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-md">
-            {sponsorshipToEdit ? 'Edit Sponsorship' : 'New Sponsorship'}
+            {isEdit ? 'Edit Sponsorship' : 'New Sponsorship'}
           </span>
           <h2 className="text-xl font-extrabold text-slate-900 mt-1">
-            {sponsorshipToEdit ? 'Edit Sponsorship' : 'Add Sponsorship Contribution'}
+            {isEdit ? 'Edit Sponsorship' : 'Add Sponsorship Contribution'}
           </h2>
         </div>
 

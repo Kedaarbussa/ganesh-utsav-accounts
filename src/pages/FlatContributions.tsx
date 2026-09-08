@@ -592,21 +592,9 @@ export const FlatContributions: React.FC = () => {
           loadData();
         }}
         festivalId={activeFestival?._id || 'fest_2026_001'}
-        fundToEdit={
-          selectedFlatForFund
-            ? ({
-                _id: '',
-                festivalId: activeFestival?._id || 'fest_2026_001',
-                flatNumber: selectedFlatForFund.flatNumber,
-                residentName: selectedFlatForFund.residentName,
-                amount: '' as any,
-                paymentMode: 'CASH',
-                date: new Date().toISOString(),
-                description: 'Festival Contribution',
-                createdBy: '',
-              } as any)
-            : null
-        }
+        fundToEdit={null}
+        initialFlatNumber={selectedFlatForFund?.flatNumber}
+        initialResidentName={selectedFlatForFund?.residentName}
       />
 
       {/* Flat History Detail Modal */}

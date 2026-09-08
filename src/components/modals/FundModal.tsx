@@ -9,6 +9,8 @@ interface FundModalProps {
   onSuccess: () => void;
   festivalId: string;
   fundToEdit?: Fund | null;
+  initialFlatNumber?: string;
+  initialResidentName?: string;
 }
 
 export const FundModal: React.FC<FundModalProps> = ({
@@ -17,6 +19,8 @@ export const FundModal: React.FC<FundModalProps> = ({
   onSuccess,
   festivalId,
   fundToEdit,
+  initialFlatNumber,
+  initialResidentName,
 }) => {
   const [flatNumber, setFlatNumber] = useState('');
   const [residentName, setResidentName] = useState('');
@@ -32,6 +36,8 @@ export const FundModal: React.FC<FundModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = Boolean(fundToEdit && fundToEdit._id);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,19 +56,19 @@ export const FundModal: React.FC<FundModalProps> = ({
   };
 
   useEffect(() => {
-    if (fundToEdit) {
+    if (fundToEdit && fundToEdit._id) {
       setFlatNumber(fundToEdit.flatNumber);
       setResidentName(fundToEdit.residentName);
-      setAmount(fundToEdit.amount.toString());
-      setPaymentMode(fundToEdit.paymentMode);
-      setDate(new Date(fundToEdit.date).toISOString().split('T')[0]);
+      setAmount(fundToEdit.amount ? fundToEdit.amount.toString() : '');
+      setPaymentMode(fundToEdit.paymentMode || 'CASH');
+      setDate(fundToEdit.date ? new Date(fundToEdit.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDescription(fundToEdit.description || 'Festival Contribution');
       setNotes(fundToEdit.notes || '');
       setTransactionReference(fundToEdit.transactionReference || '');
       setProofUrl(fundToEdit.proofUrl || '');
     } else {
-      setFlatNumber('');
-      setResidentName('');
+      setFlatNumber(initialFlatNumber || '');
+      setResidentName(initialResidentName || '');
       setAmount('');
       setPaymentMode('CASH');
       setDate(new Date().toISOString().split('T')[0]);
@@ -72,7 +78,7 @@ export const FundModal: React.FC<FundModalProps> = ({
       setProofUrl('');
     }
     setError('');
-  }, [fundToEdit, isOpen]);
+  }, [fundToEdit, initialFlatNumber, initialResidentName, isOpen]);
 
   if (!isOpen) return null;
 
@@ -128,7 +134,7 @@ export const FundModal: React.FC<FundModalProps> = ({
         proofUrl,
       };
 
-      if (fundToEdit) {
+      if (isEdit && fundToEdit?._id) {
         await api.put(`/funds/${fundToEdit._id}`, body);
       } else {
         await api.post('/funds', body);
@@ -155,10 +161,10 @@ export const FundModal: React.FC<FundModalProps> = ({
 
         <div className="mb-6">
           <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-md">
-            {fundToEdit ? 'Edit Transaction' : 'New Contribution'}
+            {isEdit ? 'Edit Transaction' : 'New Contribution'}
           </span>
           <h2 className="text-xl font-extrabold text-slate-900 mt-1">
-            {fundToEdit ? 'Edit Funds Received' : 'Add Funds Received'}
+            {isEdit ? 'Edit Funds Received' : 'Add Funds Received'}
           </h2>
           <p className="text-xs text-slate-500">Record festival contribution money received from flat / resident</p>
         </div>
