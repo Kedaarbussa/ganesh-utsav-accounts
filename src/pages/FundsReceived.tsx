@@ -6,7 +6,8 @@ import { api } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/exportUtils';
 import { FundModal } from '../components/modals/FundModal';
 import { ReceiptViewModal } from '../components/modals/ReceiptViewModal';
-import { Plus, Search, Filter, Edit, Trash2, FileText, Wallet } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, FileText, Wallet, Upload, FileSpreadsheet, Check, AlertCircle, X } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export const FundsReceived: React.FC = () => {
   const { activeFestival } = useFestival();
@@ -27,6 +28,11 @@ export const FundsReceived: React.FC = () => {
   const [viewProofUrl, setViewProofUrl] = useState('');
   const [viewProofTitle, setViewProofTitle] = useState('');
 
+  // Excel Import
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const fetchFunds = useCallback(async () => {
     if (!activeFestival) return;
     setLoading(true);
@@ -39,6 +45,67 @@ export const FundsReceived: React.FC = () => {
       setLoading(false);
     }
   }, [activeFestival]);
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawData = XLSX.utils.sheet_to_json(ws) as any[];
+
+        if (!rawData || rawData.length === 0) {
+          setImportResult({ success: false, message: 'No rows found in the uploaded file.' });
+          setImporting(false);
+          return;
+        }
+
+        const parsedFunds: Partial<Fund>[] = [];
+        for (const row of rawData) {
+          const flatNum = row['Flat No'] || row['Flat Number'] || row['Flat'] || row['FlatNo'] || row['flatNumber'] || row['flat'] || '';
+          const name = row['Name'] || row['Resident Name'] || row['Resident'] || row['residentName'] || '';
+          const amount = row['Amount'] || row['Chanda'] || row['Paid'] || row['Contribution'] || row['amount'] || 0;
+          const mode = (row['Payment Mode'] || row['Mode'] || row['paymentMode'] || 'CASH').toString().toUpperCase().includes('ONLINE') ? 'ONLINE' : 'CASH';
+          const date = row['Date'] || row['date'] || new Date().toISOString().split('T')[0];
+
+          if (flatNum && Number(amount) > 0) {
+            parsedFunds.push({
+              festivalId: activeFestival?._id || 'fest_2026_001',
+              flatNumber: flatNum.toString().trim(),
+              residentName: name ? name.toString().trim() : undefined,
+              amount: Number(amount),
+              paymentMode: mode as any,
+              date: date ? new Date(date).toISOString() : new Date().toISOString(),
+              description: 'Festival Contribution (Imported from Excel)',
+            });
+          }
+        }
+
+        if (parsedFunds.length === 0) {
+          setImportResult({ success: false, message: 'Could not find valid Flat Number and Amount columns in Excel.' });
+          setImporting(false);
+          return;
+        }
+
+        await api.post('/funds/bulk', { funds: parsedFunds });
+        setImportResult({ success: true, message: `Successfully imported ${parsedFunds.length} contributions!` });
+        fetchFunds();
+      } catch (err: any) {
+        setImportResult({ success: false, message: err.message || 'Error processing Excel file.' });
+      } finally {
+        setImporting(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   useEffect(() => {
     fetchFunds();
@@ -82,15 +149,24 @@ export const FundsReceived: React.FC = () => {
           <p className="text-xs text-slate-500">Flat-wise Ganesh festival contributions received by committee</p>
         </div>
 
-        <button
-          onClick={() => {
-            setFundToEdit(null);
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-transform active:scale-95"
-        >
-          <Plus className="w-5 h-5 mr-1.5" /> + Add Funds Received
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setImportModalOpen(true)}
+            className="inline-flex items-center justify-center px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-sm shadow-sm transition-transform active:scale-95"
+          >
+            <Upload className="w-4 h-4 mr-1.5 text-emerald-600" /> Import from Excel
+          </button>
+
+          <button
+            onClick={() => {
+              setFundToEdit(null);
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-transform active:scale-95"
+          >
+            <Plus className="w-5 h-5 mr-1.5" /> + Add Funds Received
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar & Summary */}
@@ -222,6 +298,61 @@ export const FundsReceived: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Excel Import Modal */}
+      {importModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-emerald-100">
+            <button
+              onClick={() => setImportModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-2 text-emerald-700 font-bold text-xs uppercase mb-1">
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Bulk Excel Import</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-900 mb-2">Import Funds from Excel</h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Upload your Excel sheet (.xlsx, .xls, .csv). The sheet should have columns for <strong>Flat No</strong>, <strong>Name</strong>, and <strong>Amount</strong>.
+            </p>
+
+            {importResult && (
+              <div
+                className={`mb-4 p-3.5 rounded-xl text-xs flex items-center ${
+                  importResult.success
+                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                }`}
+              >
+                {importResult.success ? (
+                  <Check className="w-4 h-4 mr-2 shrink-0 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 mr-2 shrink-0 text-red-500" />
+                )}
+                <span className="font-semibold">{importResult.message}</span>
+              </div>
+            )}
+
+            <div className="p-6 border-2 border-dashed border-emerald-200 rounded-2xl bg-emerald-50/40 text-center">
+              <Upload className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+              <label className="cursor-pointer inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+                {importing ? 'Processing File...' : 'Choose Excel File (.xlsx)'}
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleExcelUpload}
+                  disabled={importing}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-[11px] text-slate-400 mt-2">Accepted formats: .xlsx, .xls, .csv</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {isModalOpen && (

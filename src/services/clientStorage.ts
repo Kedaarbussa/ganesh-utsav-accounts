@@ -1,12 +1,56 @@
-import { User, Festival, Fund, Sponsorship, Expense, CommitteeMember, ActivityLog, DashboardSummary, FinalReportData } from '../types';
+import { User, Festival, Fund, Sponsorship, Expense, CommitteeMember, ActivityLog, DashboardSummary, FinalReportData, Flat } from '../types';
 import { supabase } from './supabase';
 
 const STORAGE_KEY = 'ganesh_utsav_accounts_db_v2';
 const STORE_ROW_ID = 'main_store';
 
+export const DEFAULT_FLATS: Flat[] = [
+  { flatNumber: '101', residentName: 'C.R.K. Mallinath' },
+  { flatNumber: '102', residentName: 'I. Narasimha Reddy' },
+  { flatNumber: '103', residentName: 'T.S.N. Murthy' },
+  { flatNumber: '104', residentName: 'V.R.A.Srinivas' },
+  { flatNumber: '105', residentName: 'Dr. A Kashipathi' },
+  { flatNumber: '106', residentName: 'G. Rajani Asha Latha' },
+  { flatNumber: '107', residentName: 'K.S. Subbarao' },
+  { flatNumber: '108', residentName: 'Murali Krishna' },
+  { flatNumber: '201', residentName: 'Nagaraj' },
+  { flatNumber: '202', residentName: 'Lingamaiah Yadav' },
+  { flatNumber: '203', residentName: 'K.S. Bhushan' },
+  { flatNumber: '204', residentName: 'N.S. Nagaraju' },
+  { flatNumber: '205', residentName: 'V.V. Ramana Murthy' },
+  { flatNumber: '206', residentName: 'I. Siva Sarma' },
+  { flatNumber: '207', residentName: 'V.N.K. Srinivas' },
+  { flatNumber: '208', residentName: 'M.T.C. Sekhar Rao' },
+  { flatNumber: '301', residentName: 'A.V. Narasimha Rao' },
+  { flatNumber: '302', residentName: 'V. Satyavathi' },
+  { flatNumber: '303', residentName: 'S. Deepika' },
+  { flatNumber: '304', residentName: 'Rajesh Agarwal' },
+  { flatNumber: '305', residentName: 'K. Jyothi' },
+  { flatNumber: '306', residentName: 'D. Vardhini Sastry' },
+  { flatNumber: '307', residentName: 'Debajit Chakraborthy' },
+  { flatNumber: '308', residentName: 'Ravi Shankar B' },
+  { flatNumber: '401', residentName: 'R. Ravindranath' },
+  { flatNumber: '402', residentName: 'G.S. Murthy' },
+  { flatNumber: '403', residentName: 'A.S.K. Reddy' },
+  { flatNumber: '404', residentName: 'S. Kaushik' },
+  { flatNumber: '405', residentName: 'Y. Ajay Raj' },
+  { flatNumber: '406', residentName: 'G. Arun Kumar' },
+  { flatNumber: '407', residentName: 'Lavanya Prabha A' },
+  { flatNumber: '408', residentName: 'M. Srinivas' },
+  { flatNumber: '501', residentName: 'R. Anuradha' },
+  { flatNumber: '502', residentName: 'B. Ravinder' },
+  { flatNumber: '503', residentName: 'Seema Gaur' },
+  { flatNumber: '504', residentName: 'V. Krishna Mohan' },
+  { flatNumber: '505', residentName: 'V.M. Prakash' },
+  { flatNumber: '506', residentName: 'C. Sasikala Reddy' },
+  { flatNumber: '507', residentName: 'M. Jagadeeshwar Reddy' },
+  { flatNumber: '508', residentName: 'K. Kameswara Rao' },
+];
+
 interface StorageSchema {
   users: User[];
   festivals: Festival[];
+  flats: Flat[];
   committeeMembers: CommitteeMember[];
   funds: Fund[];
   sponsorships: Sponsorship[];
@@ -59,6 +103,7 @@ function getInitialData(): StorageSchema {
         createdAt: new Date().toISOString(),
       },
     ],
+    flats: [...DEFAULT_FLATS],
     committeeMembers: [
       {
         _id: 'cm_001',
@@ -73,79 +118,8 @@ function getInitialData(): StorageSchema {
         position: 'Treasurer',
       },
     ],
-    funds: [
-      {
-        _id: 'fnd_001',
-        festivalId: festId,
-        flatNumber: '101',
-        residentName: 'Ravi Kumar',
-        amount: 3000,
-        paymentMode: 'CASH',
-        date: '2026-09-01T10:00:00.000Z',
-        description: 'Festival Contribution',
-        createdBy: adminId,
-        createdByName: 'Admin User',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        _id: 'fnd_002',
-        festivalId: festId,
-        flatNumber: '102',
-        residentName: 'Arun Sharma',
-        amount: 2500,
-        paymentMode: 'ONLINE',
-        date: '2026-09-02T11:30:00.000Z',
-        description: 'Festival Contribution',
-        transactionReference: 'UPI/981273981273',
-        createdBy: adminId,
-        createdByName: 'Admin User',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        _id: 'fnd_003',
-        festivalId: festId,
-        flatNumber: '103',
-        residentName: 'John Doe',
-        amount: 3000,
-        paymentMode: 'CASH',
-        date: '2026-09-03T14:15:00.000Z',
-        description: 'Festival Contribution',
-        createdBy: memberId,
-        createdByName: 'Ravinder Committee',
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    sponsorships: [
-      {
-        _id: 'spn_001',
-        festivalId: festId,
-        flatNumber: '503',
-        residentName: 'Anand Jaya Babu',
-        sponsoredItem: 'Lunch',
-        amount: 8000,
-        paymentMode: 'ONLINE',
-        date: '2026-09-03T09:00:00.000Z',
-        description: 'Grand Mahaprasadam Lunch Sponsorship',
-        paymentReference: 'UPI/44129837192',
-        createdBy: adminId,
-        createdByName: 'Admin User',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        _id: 'spn_002',
-        festivalId: festId,
-        flatNumber: '504',
-        residentName: 'V. Krishna Mohan',
-        sponsoredItem: 'Laddoo',
-        amount: 2500,
-        paymentMode: 'CASH',
-        date: '2026-09-04T16:00:00.000Z',
-        description: 'Special 21KG Laddoo Prasadam',
-        createdBy: adminId,
-        createdByName: 'Admin User',
-        createdAt: new Date().toISOString(),
-      },
-    ],
+    funds: [],
+    sponsorships: [],
     expenses: [
       {
         _id: 'exp_001',
@@ -169,30 +143,6 @@ function getInitialData(): StorageSchema {
         paymentMode: 'ONLINE',
         date: '2026-08-30T12:00:00.000Z',
         notes: 'Mandap lights and floral backdrop setup',
-        createdBy: adminId,
-        createdByName: 'Admin User',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        _id: 'exp_003',
-        festivalId: festId,
-        expenseDescription: 'Flowers & Mala',
-        amount: 2500,
-        spentBy: 'Ravinder',
-        paymentMode: 'CASH',
-        date: '2026-09-01T07:00:00.000Z',
-        createdBy: memberId,
-        createdByName: 'Ravinder Committee',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        _id: 'exp_004',
-        festivalId: festId,
-        expenseDescription: 'Water Cans',
-        amount: 600,
-        spentBy: 'Anand',
-        paymentMode: 'CASH',
-        date: '2026-09-02T08:00:00.000Z',
         createdBy: adminId,
         createdByName: 'Admin User',
         createdAt: new Date().toISOString(),
@@ -221,6 +171,9 @@ class ClientStorageEngine {
     if (raw) {
       try {
         this.db = JSON.parse(raw);
+        if (!this.db.flats || this.db.flats.length === 0) {
+          this.db.flats = [...DEFAULT_FLATS];
+        }
       } catch (e) {
         this.db = getInitialData();
         this.saveLocal();
@@ -254,6 +207,9 @@ class ClientStorageEngine {
 
       if (data && data.data) {
         this.db = data.data;
+        if (!this.db.flats || this.db.flats.length === 0) {
+          this.db.flats = [...DEFAULT_FLATS];
+        }
         this.saveLocal();
       } else if (error && error.code === 'PGRST116') {
         // Row does not exist yet; initialize cloud store
@@ -332,6 +288,58 @@ class ClientStorageEngine {
     } catch (e) {
       throw new Error('Invalid token');
     }
+  }
+
+  // --- FLATS DIRECTORY ---
+  async getFlats(): Promise<Flat[]> {
+    await this.pullFromCloud();
+    if (!this.db.flats || this.db.flats.length === 0) {
+      this.db.flats = [...DEFAULT_FLATS];
+      await this.pushToCloud();
+    }
+    return [...this.db.flats].sort((a, b) =>
+      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }
+
+  async createFlat(flatData: { flatNumber: string; residentName: string }): Promise<Flat> {
+    await this.pullFromCloud();
+    if (!this.db.flats) this.db.flats = [...DEFAULT_FLATS];
+    const key = flatData.flatNumber.trim();
+    const existingIndex = this.db.flats.findIndex((f) => f.flatNumber.trim().toLowerCase() === key.toLowerCase());
+    const newFlat: Flat = {
+      _id: 'flt_' + Date.now(),
+      flatNumber: key,
+      residentName: flatData.residentName.trim(),
+    };
+    if (existingIndex >= 0) {
+      this.db.flats[existingIndex] = newFlat;
+    } else {
+      this.db.flats.push(newFlat);
+    }
+    await this.pushToCloud();
+    return newFlat;
+  }
+
+  async updateFlat(flatNumber: string, residentName: string): Promise<Flat> {
+    await this.pullFromCloud();
+    if (!this.db.flats) this.db.flats = [...DEFAULT_FLATS];
+    const key = flatNumber.trim().toLowerCase();
+    const flat = this.db.flats.find((f) => f.flatNumber.trim().toLowerCase() === key);
+    if (!flat) {
+      return this.createFlat({ flatNumber, residentName });
+    }
+    flat.residentName = residentName.trim();
+    await this.pushToCloud();
+    return flat;
+  }
+
+  async deleteFlat(flatNumber: string): Promise<void> {
+    await this.pullFromCloud();
+    if (!this.db.flats) this.db.flats = [...DEFAULT_FLATS];
+    const key = flatNumber.trim().toLowerCase();
+    this.db.flats = this.db.flats.filter((f) => f.flatNumber.trim().toLowerCase() !== key);
+    await this.pushToCloud();
   }
 
   // --- USERS ---
@@ -422,11 +430,22 @@ class ClientStorageEngine {
 
   async createFund(fundData: Partial<Fund>, userId: string, userName: string): Promise<Fund> {
     await this.pullFromCloud();
+    const flatNumber = (fundData.flatNumber || '').trim();
+    let resName = (fundData.residentName || '').trim();
+
+    // Auto-associate or update flat resident name if provided
+    if (flatNumber) {
+      const flat = this.db.flats?.find((f) => f.flatNumber.trim().toLowerCase() === flatNumber.toLowerCase());
+      if (flat && !resName) {
+        resName = flat.residentName;
+      }
+    }
+
     const newFund: Fund = {
-      _id: 'fnd_' + Date.now(),
+      _id: 'fnd_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       festivalId: fundData.festivalId || 'fest_2026_001',
-      flatNumber: fundData.flatNumber || '',
-      residentName: fundData.residentName || '',
+      flatNumber: flatNumber,
+      residentName: resName,
       amount: Number(fundData.amount) || 0,
       paymentMode: fundData.paymentMode || 'CASH',
       date: fundData.date || new Date().toISOString(),
@@ -442,6 +461,39 @@ class ClientStorageEngine {
     await this.addActivityLog(userId, userName, 'CREATE_FUND', `Added contribution of ₹${newFund.amount} for Flat ${newFund.flatNumber}`, newFund.festivalId);
     await this.pushToCloud();
     return newFund;
+  }
+
+  async bulkCreateFunds(fundsList: Partial<Fund>[], userId: string, userName: string): Promise<{ count: number }> {
+    await this.pullFromCloud();
+    let count = 0;
+    for (const fundData of fundsList) {
+      if (!fundData.flatNumber || !fundData.amount) continue;
+      const flatNum = fundData.flatNumber.toString().trim();
+      const flat = this.db.flats?.find((f) => f.flatNumber.trim().toLowerCase() === flatNum.toLowerCase());
+      const resName = fundData.residentName || flat?.residentName || `Flat ${flatNum}`;
+
+      const newFund: Fund = {
+        _id: 'fnd_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        festivalId: fundData.festivalId || 'fest_2026_001',
+        flatNumber: flatNum,
+        residentName: resName,
+        amount: Number(fundData.amount) || 0,
+        paymentMode: fundData.paymentMode || 'CASH',
+        date: fundData.date || new Date().toISOString(),
+        description: fundData.description || 'Festival Contribution',
+        notes: fundData.notes,
+        transactionReference: fundData.transactionReference,
+        proofUrl: fundData.proofUrl,
+        createdBy: userId,
+        createdByName: userName,
+        createdAt: new Date().toISOString(),
+      };
+      this.db.funds.push(newFund);
+      count++;
+    }
+    await this.addActivityLog(userId, userName, 'BULK_IMPORT_FUNDS', `Bulk imported ${count} contributions`);
+    await this.pushToCloud();
+    return { count };
   }
 
   async updateFund(id: string, fundData: Partial<Fund>): Promise<Fund> {
@@ -468,11 +520,19 @@ class ClientStorageEngine {
 
   async createSponsorship(sponsorshipData: Partial<Sponsorship>, userId: string, userName: string): Promise<Sponsorship> {
     await this.pullFromCloud();
+    const flatNum = (sponsorshipData.flatNumber || '').trim();
+    let resName = (sponsorshipData.residentName || '').trim();
+
+    if (flatNum && !resName) {
+      const flat = this.db.flats?.find((f) => f.flatNumber.trim().toLowerCase() === flatNum.toLowerCase());
+      if (flat) resName = flat.residentName;
+    }
+
     const newSponsorship: Sponsorship = {
-      _id: 'spn_' + Date.now(),
+      _id: 'spn_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       festivalId: sponsorshipData.festivalId || 'fest_2026_001',
-      flatNumber: sponsorshipData.flatNumber || '',
-      residentName: sponsorshipData.residentName || '',
+      flatNumber: flatNum,
+      residentName: resName,
       sponsoredItem: sponsorshipData.sponsoredItem || '',
       amount: Number(sponsorshipData.amount) || 0,
       paymentMode: sponsorshipData.paymentMode || 'CASH',
@@ -523,7 +583,7 @@ class ClientStorageEngine {
   async createExpense(expenseData: Partial<Expense>, userId: string, userName: string): Promise<Expense> {
     await this.pullFromCloud();
     const newExpense: Expense = {
-      _id: 'exp_' + Date.now(),
+      _id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       festivalId: expenseData.festivalId || 'fest_2026_001',
       expenseDescription: expenseData.expenseDescription || '',
       amount: Number(expenseData.amount) || 0,

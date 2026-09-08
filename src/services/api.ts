@@ -79,7 +79,32 @@ async function handleClientApi(endpoint: string, method: string, body?: any): Pr
     return { message: 'User deleted' };
   }
 
+  // --- FLATS ---
+  if (urlPath === '/flats' && method === 'GET') {
+    return clientStorage.getFlats();
+  }
+
+  if (urlPath === '/flats' && method === 'POST') {
+    return clientStorage.createFlat(body);
+  }
+
+  if (urlPath.startsWith('/flats/') && method === 'PUT') {
+    const flatNum = decodeURIComponent(urlPath.replace('/flats/', ''));
+    return clientStorage.updateFlat(flatNum, body.residentName);
+  }
+
+  if (urlPath.startsWith('/flats/') && method === 'DELETE') {
+    const flatNum = decodeURIComponent(urlPath.replace('/flats/', ''));
+    clientStorage.deleteFlat(flatNum);
+    return { message: 'Flat removed' };
+  }
+
   // --- FUNDS ---
+  if (urlPath === '/funds/bulk' && method === 'POST') {
+    const userRes = clientStorage.getMe(token);
+    return clientStorage.bulkCreateFunds(body.funds || [], userRes.user.id || userRes.user._id || '', userRes.user.fullName);
+  }
+
   if (urlPath === '/funds' && method === 'GET') {
     const festivalId = getQueryParam('festivalId');
     return clientStorage.getFunds(festivalId);

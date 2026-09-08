@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Fund, PaymentMode } from '../../types';
+import { Fund, PaymentMode, Flat } from '../../types';
 import { api } from '../../services/api';
 import { X, Upload, Check, AlertCircle } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export const FundModal: React.FC<FundModalProps> = ({
 }) => {
   const [flatNumber, setFlatNumber] = useState('');
   const [residentName, setResidentName] = useState('');
+  const [flatsList, setFlatsList] = useState<Flat[]>([]);
   const [amount, setAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -31,6 +32,22 @@ export const FundModal: React.FC<FundModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get<Flat[]>('/flats').then((flats) => {
+        setFlatsList(flats || []);
+      }).catch(() => {});
+    }
+  }, [isOpen]);
+
+  const handleFlatChange = (val: string) => {
+    setFlatNumber(val);
+    const match = flatsList.find((f) => f.flatNumber.trim().toLowerCase() === val.trim().toLowerCase());
+    if (match) {
+      setResidentName(match.residentName);
+    }
+  };
 
   useEffect(() => {
     if (fundToEdit) {
@@ -159,12 +176,20 @@ export const FundModal: React.FC<FundModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">Flat Number *</label>
               <input
                 type="text"
-                placeholder="e.g. 503"
+                list="fund-flats-list"
+                placeholder="e.g. 101"
                 value={flatNumber}
-                onChange={(e) => setFlatNumber(e.target.value)}
+                onChange={(e) => handleFlatChange(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
+              <datalist id="fund-flats-list">
+                {flatsList.map((f) => (
+                  <option key={f.flatNumber} value={f.flatNumber}>
+                    {f.flatNumber} - {f.residentName}
+                  </option>
+                ))}
+              </datalist>
             </div>
 
             <div>

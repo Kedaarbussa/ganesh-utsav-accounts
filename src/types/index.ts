@@ -12,6 +12,12 @@ export interface User {
   createdAt?: string;
 }
 
+export interface Flat {
+  _id?: string;
+  flatNumber: string;
+  residentName: string;
+}
+
 export interface Festival {
   _id: string;
   apartmentName: string;
