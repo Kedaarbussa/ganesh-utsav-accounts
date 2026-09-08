@@ -535,6 +535,7 @@ class ClientStorageEngine {
       residentName: resName,
       sponsoredItem: sponsorshipData.sponsoredItem || '',
       amount: Number(sponsorshipData.amount) || 0,
+      recognitionAmount: sponsorshipData.recognitionAmount ? Number(sponsorshipData.recognitionAmount) : undefined,
       paymentMode: sponsorshipData.paymentMode || 'CASH',
       date: sponsorshipData.date || new Date().toISOString(),
       description: sponsorshipData.description,
@@ -844,6 +845,7 @@ class ClientStorageEngine {
       residentName: s.residentName,
       sponsoredItem: s.sponsoredItem,
       amount: s.amount,
+      recognitionAmount: s.recognitionAmount,
       paymentMode: s.paymentMode,
       date: s.date,
     }));

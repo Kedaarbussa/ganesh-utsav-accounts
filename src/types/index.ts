@@ -53,6 +53,7 @@ export interface Sponsorship {
   residentName: string;
   sponsoredItem: string;
   amount: number;
+  recognitionAmount?: number;
   paymentMode: PaymentMode;
   date: string;
   description?: string;
@@ -141,6 +142,7 @@ export interface FinalReportData {
     residentName: string;
     sponsoredItem: string;
     amount: number;
+    recognitionAmount?: number;
     paymentMode: PaymentMode;
     date: string;
   }>;

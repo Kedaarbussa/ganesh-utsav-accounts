@@ -27,6 +27,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
   const [flatsList, setFlatsList] = useState<Flat[]>([]);
   const [sponsoredItem, setSponsoredItem] = useState('Lunch');
   const [amount, setAmount] = useState('');
+  const [recognitionAmount, setRecognitionAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('ONLINE');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
@@ -74,6 +75,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
       setResidentName(sponsorshipToEdit.residentName);
       setSponsoredItem(sponsorshipToEdit.sponsoredItem);
       setAmount(sponsorshipToEdit.amount ? sponsorshipToEdit.amount.toString() : '');
+      setRecognitionAmount(sponsorshipToEdit.recognitionAmount ? sponsorshipToEdit.recognitionAmount.toString() : '');
       setPaymentMode(sponsorshipToEdit.paymentMode || 'ONLINE');
       setDate(sponsorshipToEdit.date ? new Date(sponsorshipToEdit.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDescription(sponsorshipToEdit.description || '');
@@ -85,6 +87,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
       setResidentName(initialResidentName || '');
       setSponsoredItem('Lunch');
       setAmount('');
+      setRecognitionAmount('');
       setPaymentMode('ONLINE');
       setDate(new Date().toISOString().split('T')[0]);
       setDescription('');
@@ -142,6 +145,7 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
         residentName: residentName.trim(),
         sponsoredItem: sponsoredItem.trim(),
         amount: Number(amount),
+        recognitionAmount: recognitionAmount ? Number(recognitionAmount) : undefined,
         paymentMode,
         date,
         description: description.trim(),
@@ -266,28 +270,42 @@ export const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Sponsorship Amount (₹) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Accounting Amount (₹) *</label>
               <input
                 type="number"
-                placeholder="e.g. 8000"
+                placeholder="e.g. 22001"
                 min="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500"
               />
+              <span className="text-[10px] text-slate-400">Actual amount counted in accounts</span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Date *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Display Recognition Amount (₹)</label>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500"
+                type="number"
+                placeholder="e.g. 25001 (Optional)"
+                min="1"
+                value={recognitionAmount}
+                onChange={(e) => setRecognitionAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-amber-300 bg-amber-50/40 rounded-xl text-sm font-bold text-amber-950 focus:ring-2 focus:ring-amber-500"
               />
+              <span className="text-[10px] text-amber-700 font-semibold">Optional: Amount to show in Sponsor list</span>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Date *</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500"
+            />
           </div>
 
           {/* Payment Mode Selector - Strictly CASH or ONLINE */}

@@ -111,7 +111,7 @@ export function exportFinalReportPDF(data: FinalReportData) {
       ev.flatNumber,
       ev.residentName,
       ev.sponsoredItem,
-      formatCurrency(ev.amount),
+      formatCurrency(ev.recognitionAmount || ev.amount),
     ]);
 
     autoTable(doc, {

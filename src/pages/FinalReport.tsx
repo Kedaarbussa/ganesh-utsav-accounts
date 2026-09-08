@@ -68,7 +68,7 @@ export const FinalReport: React.FC = () => {
           'Flat No': e.flatNumber,
           'Resident Name': e.residentName,
           'Sponsored Item': e.sponsoredItem,
-          Amount: e.amount,
+          Amount: e.recognitionAmount || e.amount,
           Mode: e.paymentMode,
         })),
       },
@@ -268,7 +268,7 @@ export const FinalReport: React.FC = () => {
                         {ev.sponsoredItem}
                       </td>
                       <td className="py-2 px-3 text-right font-black text-amber-800">
-                        {formatCurrency(ev.amount)}
+                        {formatCurrency(ev.recognitionAmount || ev.amount)}
                       </td>
                     </tr>
                   ))}
