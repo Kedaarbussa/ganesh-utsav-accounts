@@ -184,8 +184,8 @@ async function handleClientApi(endpoint: string, method: string, body?: any): Pr
     return clientStorage.createCommitteeMember(body);
   }
 
-  if (urlPath.startsWith('/committee-members/') && method === 'DELETE') {
-    const id = urlPath.replace('/committee-members/', '');
+  if ((urlPath === '/committee-members' || urlPath.startsWith('/committee-members/')) && method === 'DELETE') {
+    const id = getQueryParam('id') || urlPath.replace('/committee-members/', '');
     clientStorage.deleteCommitteeMember(id);
     return { message: 'Committee member deleted' };
   }
