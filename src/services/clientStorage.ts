@@ -780,6 +780,19 @@ class ClientStorageEngine {
     // Group received funds by flat
     const flatMap = new Map<string, { flatNumber: string; residentName: string; regularAmount: number; sponsorshipAmount: number; totalAmount: number }>();
 
+    // Initialize ALL flats in directory unconditionally (all 40 flats)
+    const allFlats = (this.db.flats && this.db.flats.length > 0) ? this.db.flats : DEFAULT_FLATS;
+    allFlats.forEach((flat) => {
+      const key = flat.flatNumber.trim();
+      flatMap.set(key, {
+        flatNumber: key,
+        residentName: flat.residentName,
+        regularAmount: 0,
+        sponsorshipAmount: 0,
+        totalAmount: 0,
+      });
+    });
+
     funds.forEach((f) => {
       const key = f.flatNumber.trim();
       const existing = flatMap.get(key) || {
@@ -810,7 +823,9 @@ class ClientStorageEngine {
       flatMap.set(key, existing);
     });
 
-    const amountReceived = Array.from(flatMap.values()).sort((a, b) => a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }));
+    const amountReceived = Array.from(flatMap.values()).sort((a, b) =>
+      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
     // Group expenses by particular
     const expMap = new Map<string, { particular: string; count: number; totalAmount: number }>();
